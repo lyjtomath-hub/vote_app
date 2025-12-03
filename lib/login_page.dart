@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:vote_app/pages/sign_up_page.dart'; // 회원가입 페이지 import
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -39,38 +40,10 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _register() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      await _auth.createUserWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
-        password: _pwCtrl.text,
-      );
-      debugPrint('✅ 회원가입 성공');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('회원가입 완료!')),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      debugPrint('❌ 회원가입 실패: ${e.code} - ${e.message}');
-      setState(() => _error = e.message);
-    } catch (e) {
-      debugPrint('❗예외 발생: $e');
-      setState(() => _error = '문제가 발생했습니다. 다시 시도해주세요.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('로그인 / 회원가입')),
+      appBar: AppBar(title: const Text('로그인')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -106,7 +79,12 @@ class _LoginPageState extends State<LoginPage> {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: _register,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SignUpPage()),
+                    );
+                  },
                   child: const Text('회원가입'),
                 ),
               ),

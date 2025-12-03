@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/question.dart';
 
 // 전역 상태 ------------------------------

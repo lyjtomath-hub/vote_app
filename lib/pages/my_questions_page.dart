@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'result_page.dart';
-import '../models/question.dart';
 import 'package:vote_app/state/app_state.dart';
 
 class MyQuestionsPage extends StatelessWidget {

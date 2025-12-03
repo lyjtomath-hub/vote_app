@@ -1,7 +1,6 @@
 import 'package:vote_app/state/app_state.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vote_app/models/question.dart';
 
 
 
