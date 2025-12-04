@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:vote_app/pages/submit_question_page.dart';
 import 'package:vote_app/pages/my_questions_page.dart';
 import 'package:vote_app/pages/earn_ticket_page.dart';
-import 'package:vote_app/pages/profile_page.dart'; // ⬅️ 추가
+import 'package:vote_app/pages/profile_page.dart';
 
 class MainTabPage extends StatelessWidget {
   const MainTabPage({super.key});
@@ -11,7 +11,7 @@ class MainTabPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // ⬅️ 탭 수 변경
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('결정장애 투표앱', style: TextStyle(fontSize: 32)),
@@ -20,17 +20,17 @@ class MainTabPage extends StatelessWidget {
               Tab(text: '질문하기'),
               Tab(text: '내 질문'),
               Tab(text: '질문권 얻기'),
-              Tab(text: '내 정보'), // ⬅️ 새 탭 추가
+              Tab(text: '내 정보'),
             ],
             labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
             QuestionSubmitPage(),
             MyQuestionsPage(),
             RandomAnswerPage(),
-            ProfilePage(), // ⬅️ 내 정보 탭
+            ProfilePage(),
           ],
         ),
       ),
