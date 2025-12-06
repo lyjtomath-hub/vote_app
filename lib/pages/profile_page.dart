@@ -32,43 +32,67 @@ class _ProfilePageState extends State<ProfilePage> {
 
       email = user.email;
 
+      // 1. 사용자 정보 가져오기
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
 
-      if (!doc.exists) throw Exception('유저 정보 없음');
+      if (!doc.exists) {
+        username = user.email?.split('@')[0] ?? 'Unknown User';
+        ticket = 5;
+        answeredCount = 0;
+      } else {
+        final data = doc.data();
+        username = data?['username'] ?? 'Unknown User';
+        ticket = data?['ticket'] ?? 5;
+        answeredCount = data?['answeredCount'] ?? 0;
+      }
 
-      final data = doc.data()!;
-      username = data['username'];
-      ticket = data['ticket'] ?? 0;
-      answeredCount = data['answeredCount'] ?? 0;
-
+      // 2. 인덱스 없이 간단히 조회
       final qSnap = await FirebaseFirestore.instance
           .collection('questions')
           .where('author', isEqualTo: user.uid)
-          .orderBy('createdAt', descending: true)
           .get();
 
       myQuestions = qSnap.docs.map((d) {
         final q = d.data();
         return {
           'id': d.id,
-          'question': q['question'],
-          'options': List<String>.from(q['options']),
-          'votes': List<dynamic>.from(q['votes']),
+          'question': q['question'] ?? 'No question',
+          'options': List<String>.from(q['options'] ?? []),
+          'votes': List<dynamic>.from(q['votes'] ?? []),
+          'createdAt': q['createdAt'],
         };
       }).toList();
+
+      // Dart에서 정렬
+      myQuestions.sort((a, b) {
+        final aTime = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final bTime = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        return bTime.compareTo(aTime);
+      });
     } catch (e) {
       _error = '정보 불러오기 실패: $e';
+      print('Profile Error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+    } catch (e) {
+      print('Logout Error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 🔥 여기 수정됨: Scaffold 앞의 const 삭제
     if (_loading) {
       return Scaffold(
         appBar: AppBar(title: const Text("내 정보")),
@@ -84,16 +108,25 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("내 정보")),
+      appBar: AppBar(
+        title: const Text("내 정보"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: '로그아웃',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 8),
-            Text('아이디 (닉네임): $username', style: const TextStyle(fontSize: 20)),
+            Text('아이디 (닉네임): ${username ?? "정보 없음"}', style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 6),
-            Text('이메일: ${email ?? ""}', style: const TextStyle(fontSize: 16)),
+            Text('이메일: ${email ?? "정보 없음"}', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 16),
             Text('남은 질문권: $ticket', style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 4),
@@ -112,24 +145,84 @@ class _ProfilePageState extends State<ProfilePage> {
                       itemBuilder: (context, i) {
                         final q = myQuestions[i];
                         final opts =
-                            (q['options'] as List<String>).join(", ");
+                            (q['options'] as List<String>);
+                        final votes =
+                            (q['votes'] as List<dynamic>).map((v) => (v as num).toInt()).toList();
+                        
+                        // 최다 득표 답변 찾기
+                        int maxVotes = votes.isEmpty ? 0 : votes.reduce((a, b) => a > b ? a : b);
+                        int maxIndex = votes.indexOf(maxVotes);
+                        String topAnswer = maxVotes > 0 ? opts[maxIndex] : '투표 없음';
+
                         return Card(
                           margin: const EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            title: Text(
-                              q['question'],
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  q['question'] as String,
+                                  style: const TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: List.generate(opts.length, (index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                      child: Text(
+                                        '${opts[index]}: ${votes[index]}표',
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '최다 득표: $topAnswer ($maxVotes표)',
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green),
+                                ),
+                              ],
                             ),
-                            subtitle: Text("보기: $opts"),
                           ),
                         );
                       },
                     ),
-            )
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                }
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Text('로그아웃', style: TextStyle(fontSize: 36)),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     match /users/{uid} {
+//       allow read, write: if request.auth.uid == uid;
+//     }
+//     match /questions/{document=**} {
+//       allow read: if request.auth != null;
+//       allow create: if request.auth != null;
+//       allow write: if request.auth.uid == resource.data.author;
+//     }
+//   }
+// }

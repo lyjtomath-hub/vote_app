@@ -18,6 +18,38 @@ class _QuestionSubmitPageState extends State<QuestionSubmitPage> {
     TextEditingController(),
   ];
 
+  int answerCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTicket();
+  }
+
+  Future<void> _loadTicket() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        setState(() {
+          answerCount = doc.data()?['ticket'] ?? 5;
+        });
+      } else {
+        setState(() {
+          answerCount = 5;
+        });
+      }
+    } catch (e) {
+      print('Ticket Load Error: $e');
+    }
+  }
+
   void _addOption() {
     if (_optCtrls.length < 4) {
       setState(() {
@@ -52,6 +84,8 @@ class _QuestionSubmitPageState extends State<QuestionSubmitPage> {
     }
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
+    
+    // 질문 등록
     await FirebaseFirestore.instance.collection('questions').add({
       'author': uid,
       'question': qText,
@@ -60,9 +94,17 @@ class _QuestionSubmitPageState extends State<QuestionSubmitPage> {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
+    // ticket 감소
+    final newTicket = answerCount - 1;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .update({'ticket': newTicket});
+
     setState(() {
-      answerCount--;
+      answerCount = newTicket;
     });
+
     await saveAll();
 
     _qCtrl.clear();
@@ -105,10 +147,16 @@ class _QuestionSubmitPageState extends State<QuestionSubmitPage> {
             );
           }),
           if (_optCtrls.length < 4)
-            TextButton.icon(
-              onPressed: _addOption,
-              icon: const Icon(Icons.add, size: 36),
-              label: const Text('보기 추가', style: TextStyle(fontSize: 36)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: ElevatedButton.icon(
+                onPressed: _addOption,
+                icon: const Icon(Icons.add, size: 36),
+                label: const Text('보기 추가', style: TextStyle(fontSize: 36)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
             ),
           const SizedBox(height: 24),
           ElevatedButton(

@@ -4,36 +4,36 @@ import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_page.dart';
 import 'pages/main_tab_page.dart';
+import 'pages/submit_question_page.dart';
+import 'pages/profile_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  runApp(const VoteApp());
+  runApp(const MyApp());
 }
 
-class VoteApp extends StatelessWidget {
-  const VoteApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '결정장애 투표앱',
-      theme: ThemeData(primarySwatch: Colors.teal),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasData) {
-            return const MainTabPage();
-          }
-          return const LoginPage();
-        },
+      title: 'Vote App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
       ),
+      home: FirebaseAuth.instance.currentUser != null 
+        ? const MainTabPage() 
+        : const LoginPage(),
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/main': (context) => const MainTabPage(),
+        '/submit': (context) => const QuestionSubmitPage(),
+        '/profile': (context) => const ProfilePage(),
+      },
     );
   }
 }
